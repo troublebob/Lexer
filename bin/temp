@@ -1,0 +1,47 @@
+case IDENTIFIER: {
+			if (((inputCharacter >= 'A') && (inputCharacter <= 'Z')) || ((inputCharacter >= 'a') && (inputCharacter <= 'z'))) {
+				map.Method1(inputCharacter);				
+			} else if ((inputCharacter >= '0') && (inputCharacter <= '9')) {
+				System.out.println("<"+inputCharacter+">Number trigger state+1");
+				map.Method1(inputCharacter);
+				state = IDENTIFIER +1;
+			} else {
+				hash = map.Method2();
+				pushBackCharacter();
+				if (hash == finito) {
+					System.exit(0);
+				} else {
+					tokens.add(new Token("ID", hash));
+					chooseState(inputCharacter);;
+				}
+			}
+			break;
+		}
+		case IDENTIFIER + 1:{
+			if((inputCharacter >= '0') && (inputCharacter <= '9')) {
+				map.Method1(inputCharacter);
+			} else {
+				hash=map.Method2();
+				tokens.add(new Token("ID", hash));
+				chooseState(inputCharacter);
+				pushBackCharacter();
+			}
+		}
+		case WHITESPACE:{
+			
+		}
+		case STRING: {
+			
+		}
+		case INTEGER: {
+			if ((inputCharacter >= '0') && (inputCharacter <= '9')) {
+				buffer *= 10;
+				buffer += (inputCharacter - '0');
+			} else {
+				tokens.add(new Token("INT", buffer));
+				buffer = 0;
+				chooseState(inputCharacter);;
+			}
+			break;
+		}
+		}
