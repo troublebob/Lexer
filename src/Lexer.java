@@ -85,6 +85,7 @@ public class Lexer {
 				}
 				
 			}
+			break;
 
 		}
 		case IDENTIFIERENDINGWITHNUMBER:{
@@ -98,33 +99,34 @@ public class Lexer {
 				System.out.println(hash);
 				tokens.add(new Token("ID", hash));
 			}
+			break;
 		}
-		case WHITESPACE:{
-			if(Character.isWhitespace(c)){
-				
-			} else {
-				chooseState(c);
-				pushBackCharacter();
-			}
-		}
-		case SINGLECHARTOKEN:{
-			if(c=='('){
-				tokens.add(new Token("LPAR", 0));
-			} else if (c==')'){
-				tokens.add(new Token("RPAR", 0));
-			} else if (c==','){
-				tokens.add(new Token("COMMA", 0));
-			} else{
-				chooseState(c);
-				pushBackCharacter();
-			}
-		}
-		case STRING:{
-			
-		}
-		case ERROR:{
-			System.out.println("Error! Unable to complete")
-		}
+//		case WHITESPACE:{
+//			if(Character.isWhitespace(c)){
+//				
+//			} else {
+//				chooseState(c);
+//				pushBackCharacter();
+//			}
+//		}
+//		case SINGLECHARTOKEN:{
+//			if(c=='('){
+//				tokens.add(new Token("LPAR", 0));
+//			} else if (c==')'){
+//				tokens.add(new Token("RPAR", 0));
+//			} else if (c==','){
+//				tokens.add(new Token("COMMA", 0));
+//			} else{
+//				chooseState(c);
+//				pushBackCharacter();
+//			}
+//		}
+//		case STRING:{
+//			
+//		}
+//		case ERROR:{
+//			System.out.println("Error! Unable to complete");
+//		}
 		}
 
 
