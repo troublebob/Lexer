@@ -1,24 +1,31 @@
+import java.io.File;
+import java.io.FileNotFoundException;
+import java.util.Scanner;
 import java.util.Vector;
 
 public class Lexer {
-	private static Vector<Token> tokens = new Vector<Token>();
-	private int state;
-	private int characterPointer = 0;
-	private int finito = -1;
-	private SymbolTable map;
-	private int buffer = 0;
-
+	final int NOTINITIALISED =-1;
 	final int IDENTIFIER=1;
-	final int IDENTIFIERENDINGWITHNUMBER=2;
 	final int SINGLECHARTOKEN=3;
 	final int WHITESPACE=4;
 	final int INTEGER=5;
 	final int STRING=6;
-	final int ERROR=7;
+	final int OPENSTRING=7;
+	final int ERROR=8;
+
+	Vector<Token> tokens = new Vector<Token>();
+	private int state=NOTINITIALISED;
+	private int characterPointer = 0;
+	private int finito = -1;
+	private int intBuffer = 0;
+	private boolean finitoFound = false;
+	private boolean openQuote = false;
+	private SymbolTable map;
+	private Vector<Character> buffer = new Vector<Character>();
 
 	public Lexer() {
 		map = new SymbolTable();
-		state = 0;
+		state = NOTINITIALISED;
 
 		map.Method1('F');
 		map.Method1('i');
@@ -30,26 +37,29 @@ public class Lexer {
 	}
 
 	public void run(char[] input) {
-		//Set Initial state
-		chooseState(input[0]);
 
 		while (characterPointer >= 0 && characterPointer < input.length) {
 			char currentCharacter = input[characterPointer];
-			System.out.println("<"+currentCharacter+"> Going in:State: "+state);
 			evaluateCharacter(currentCharacter);			
-			System.out.println("<"+currentCharacter+"> Coming out:State: "+state);
+			if(finitoFound==true){
+				break;
+			}
 			characterPointer++;
-			System.out.println(characterPointer);
-		}		
+		}
+		if(state==STRING||state==OPENSTRING){
+			state=ERROR;
+			System.out.println("String Not Closed!");
+		}
+		
 	}
 	void chooseState(char c){
-		if(((c >= 'A') && (c <='Z')) || ((c >= 'a') && (c <='z'))){
+		if(Character.isAlphabetic(c)){
 			state=IDENTIFIER;
 		} else if (c=='"'){
 			state=STRING;
-		} else if ((c>= '0') && (c<= '9')){
+		} else if (Character.isDigit(c)){
 			state=INTEGER;
-		} else if ((c=='(')||(c==')')||(c==',')){
+		} else if (c=='('||c=='['||c=='{'||c==')'||c==']'||c=='}'){
 			state=SINGLECHARTOKEN;
 		} else if (Character.isWhitespace(c)){
 			state=WHITESPACE;
@@ -64,86 +74,117 @@ public class Lexer {
 
 	void evaluateCharacter(char c){
 		int hash=-1;
+		if(state==NOTINITIALISED){
+			chooseState(c);
+		}
 		switch (state) {
 		case IDENTIFIER: {
 			if((c>='A' && c<='Z')||(c>='a'&&c<='z')){
-				System.out.println("AZaz:"+c);
+				//System.out.println("AZaz:"+c);
 				map.Method1(c);
 			} else if (c>='0' && c<='9'){
-				state=IDENTIFIERENDINGWITHNUMBER;
 				map.Method1(c);
 			} else {
-				System.out.println("Else:"+c);
-				chooseState(c);
+				//System.out.println("Else:"+c);
+				state=NOTINITIALISED;
 				pushBackCharacter();
 				hash=map.Method2();
-				System.out.println(hash);
+				//System.out.println(hash);
 				if(hash==finito){
-					System.exit(0);
+					finitoFound=true;
 				} else {
 					tokens.add(new Token("ID", hash));
 				}
-				
 			}
+			//System.out.println("<"+c+"><"+state+">ID");
 			break;
-
 		}
-		case IDENTIFIERENDINGWITHNUMBER:{
-			if (c>='0' && c<='9'){
-				map.Method1(c);
+		case INTEGER:{
+			if(c>='0' && c<='9'){
+				if(intBuffer*10>11335577){
+					state=ERROR;
+					break;
+				}
+				intBuffer*=10;
+				intBuffer+=Character.getNumericValue(c);
 			} else {
-				System.out.println("State 2 Else:"+c);
-				chooseState(c);
+				tokens.add(new Token("INT", intBuffer));
+				state=NOTINITIALISED;
 				pushBackCharacter();
-				hash=map.Method2();
-				System.out.println(hash);
-				tokens.add(new Token("ID", hash));
+				intBuffer=0;
 			}
+			//System.out.println("<"+c+"><"+state+">INT");
 			break;
 		}
-//		case WHITESPACE:{
-//			if(Character.isWhitespace(c)){
-//				
-//			} else {
-//				chooseState(c);
-//				pushBackCharacter();
-//			}
-//		}
-//		case SINGLECHARTOKEN:{
-//			if(c=='('){
-//				tokens.add(new Token("LPAR", 0));
-//			} else if (c==')'){
-//				tokens.add(new Token("RPAR", 0));
-//			} else if (c==','){
-//				tokens.add(new Token("COMMA", 0));
-//			} else{
-//				chooseState(c);
-//				pushBackCharacter();
-//			}
-//		}
-//		case STRING:{
-//			
-//		}
-//		case ERROR:{
-//			System.out.println("Error! Unable to complete");
-//		}
+		case WHITESPACE:{
+			if(Character.isWhitespace(c)){
+
+			} else {
+				state=NOTINITIALISED;
+				pushBackCharacter();
+			}		
+			//System.out.println("<"+c+"><"+state+">WHITESPACE");
+			break;
+		}
+		case SINGLECHARTOKEN:{
+			if(c=='('||c=='['||c=='{'){
+				tokens.add(new Token("LPAR", 0));
+			} else if (c==')'||c==']'||c=='}'){
+				tokens.add(new Token("RPAR", 0));
+			} else if (c==','){
+				tokens.add(new Token("COMMA", 0));
+			} else{
+				state=NOTINITIALISED;
+				pushBackCharacter();
+			}
+			//System.out.println("<"+c+"><"+state+">SINGLECHAR");
+			break;
+		}
+		case STRING:{
+			if(c=='\"' && openQuote==false){
+				openQuote = true;
+			} else if (c=='\"' && openQuote == true){
+				openQuote=false;
+				tokens.add(new StringToken("STRING",buffer));
+				state=NOTINITIALISED;
+			} else if (c=='\\'){
+				state=OPENSTRING;
+			} else{
+				buffer.add(c);
+			}
+			
+			//System.out.println("<"+c+"><"+state+">STRING "+openQuote+ " "+buffer.toString());
+			break;
+		}
+		case OPENSTRING:{
+			//System.out.println("<"+c+"><"+state+">OPENSTRING "+openQuote+ " "+buffer.toString());
+			buffer.add(c);
+			state=STRING;
+			break;
 		}
 
-
-
-		if (hash == finito) {
-			// exit gracefully on finito
-			System.exit(0);
+		case ERROR:{
+			System.out.println("<"+c+"><"+state+">stateError! Unable to complete");
+		}
 		}
 
-		System.out.println(c);
 	}
 
-	public static void main(String[] args) {
+	public static void main(String[] args) throws FileNotFoundException {
 
-		String input = "tom17 ";
-		System.out.println(input);
+		String input="";
+		File inputFile=new File("input.txt");
+		Scanner inputScanner = new Scanner(inputFile);
+		input=inputScanner.nextLine();
 		Lexer lexer = new Lexer();
+		System.out.println(input);
 		lexer.run(input.toCharArray());
+		for(int i=0;i<lexer.tokens.size();i++){
+			System.out.println(lexer.tokens.elementAt(i).toString());
+		}
+		if(inputScanner!=null){
+			inputScanner.close();
+			}
 	}	
 }
+	
